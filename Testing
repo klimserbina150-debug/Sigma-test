@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition - Visible Check Fix)
+-- Brisk Survival (Full Edition - Stable Silent Aim)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -183,7 +183,8 @@ local function Part2()
         part.Anchored = true; part.CanCollide = false; part.Transparency = 1
         part.Parent = workspace
         
-        local a0 = Instance.new("Attachment", part); local a1 = Instance.new("Attachment", part)
+        local a0 = Instance.new("Attachment", part)
+        local a1 = Instance.new("Attachment", part)
         local beam = Instance.new("Beam", part)
         beam.Attachment0 = a0; beam.Attachment1 = a1
         beam.FaceCamera = true; beam.LightEmission = 1; beam.LightInfluence = 0
@@ -221,58 +222,59 @@ local function Part2()
         return ok and result or false
     end
 
-    -- SILENT AIM HOOK (Fixed: No Origin Spoof, Visible Check Added)
+    -- SILENT AIM HOOK (STABLE)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        
-        if not checkcaller() and method == "FireServer" and self.Name == "GunFire" then
-            local args = {...}
-            
-            if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
-                local origin = args[1] -- Use original origin (player's real position)
-                local bestTarget, bestPlayer, bestDist = nil, nil, Vars.SilentAimFov
-                local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
+        if not checkcaller() then
+            local method = getnamecallmethod()
+            if method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
+                local args = {...}
+                local success, modifiedArgs = pcall(function()
+                    if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
+                        local origin = args[1]
+                        local bestTarget, bestDist = nil, Vars.SilentAimFov
+                        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LP and p.Character then
-                        if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
-                        local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
-                        if part then
-                            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                            if hum and hum.Health > 0 then
-                                -- Check if visible
-                                if IsVisible(p.Character, part) then
-                                    local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
-                                    if onScreen then
-                                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                        if dist < bestDist then
-                                            bestDist = dist; bestTarget = part; bestPlayer = p
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LP and p.Character then
+                                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
+                                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
+                                if part then
+                                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                                    if hum and hum.Health > 0 then
+                                        if IsVisible(p.Character, part) then
+                                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
+                                            if onScreen then
+                                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                                if dist < bestDist then
+                                                    bestDist = dist; bestTarget = part
+                                                end
+                                            end
                                         end
                                     end
                                 end
                             end
                         end
-                    end
-                end
 
-                if bestTarget and bestPlayer then
-                    -- Only modify target position, direction, and user ID
-                    -- Leave origin (args[1]) alone!
-                    args[2] = bestTarget.Position
-                    args[3] = (bestTarget.Position - origin).Unit
-                    args[6] = true
-                    args[7] = bestPlayer.UserId
-                    
-                    lastShotTick = tick()
-                    if Vars.TracerEnabled then
-                        task.spawn(CreateTracer, origin, bestTarget.Position)
+                        if bestTarget then
+                            local a = table.clone(args)
+                            a[2] = bestTarget.Position
+                            a[3] = (bestTarget.Position - origin).Unit
+                            lastShotTick = tick()
+                            if Vars.TracerEnabled then
+                                task.spawn(CreateTracer, origin, bestTarget.Position)
+                            end
+                            return a
+                        end
                     end
-                    
-                    return oldNamecall(self, unpack(args))
+                    lastShotTick = tick()
+                    return args
+                end)
+                
+                if success and modifiedArgs then
+                    return oldNamecall(self, unpack(modifiedArgs))
                 end
             end
-            lastShotTick = tick()
         end
         return oldNamecall(self, ...)
     end)
@@ -356,10 +358,8 @@ local function Part2()
         end)
     end)
 
-    -- ESP & CHAMS
+    -- ESP
     local ESPData = {}
-    local ChamsData = {}
-    
     local function CreateESP(p)
         if ESPData[p] then return end
         ESPData[p] = {
@@ -369,7 +369,6 @@ local function Part2()
         ESPData[p].Name.Size = 14; ESPData[p].Name.Center = true; ESPData[p].Name.Outline = true
         ESPData[p].Health.Thickness = 1; ESPData[p].Health.Filled = true
     end
-
     for _, p in ipairs(Players:GetPlayers()) do CreateESP(p) end
     Players.PlayerAdded:Connect(CreateESP)
 
@@ -425,6 +424,8 @@ local function Part2()
         end)
     end)
 
+    -- CHAMS
+    local ChamsData = {}
     RunService.Heartbeat:Connect(function()
         pcall(function()
             for _, p in ipairs(Players:GetPlayers()) do
