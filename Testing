@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition - Pure Silent Aim)
+-- Brisk Survival (Full Edition - Raycast Silent Aim)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -205,63 +205,91 @@ local function Part2()
         return ok and result or false
     end
 
-    -- SILENT AIM HOOK (Only trajectory change, no flag spoofing)
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        if not checkcaller() then
-            local method = getnamecallmethod()
-            if method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
-                local args = {...}
-                local success, modifiedArgs = pcall(function()
-                    if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
-                        local origin = args[1]
-                        local bestTarget, bestDist = nil, Vars.SilentAimFov
-                        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
+    local function GetSilentTarget()
+        if not Vars.SilentAim then return nil end
+        local bestTarget, bestDist = nil, Vars.SilentAimFov
+        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p ~= LP and p.Character then
-                                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
-                                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
-                                if part then
-                                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                                    if hum and hum.Health > 0 then
-                                        if IsVisible(p.Character, part) then
-                                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
-                                            if onScreen then
-                                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                                if dist < bestDist then
-                                                    bestDist = dist; bestTarget = part
-                                                end
-                                            end
-                                        end
-                                    end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
+                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
+                if part then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        if IsVisible(p.Character, part) then
+                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
+                            if onScreen then
+                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                if dist < bestDist then
+                                    bestDist = dist; bestTarget = part
                                 end
                             end
                         end
-
-                        if bestTarget then
-                            local a = table.clone(args)
-                            -- Only modify target and direction. Do not touch args[6] or args[7].
-                            a[2] = bestTarget.Position
-                            a[3] = (bestTarget.Position - args[1]).Unit
-                            
-                            lastShotTick = tick()
-                            if Vars.TracerEnabled then
-                                task.spawn(CreateTracer, args[1], bestTarget.Position)
-                            end
-                            return a
-                        end
                     end
-                    lastShotTick = tick()
-                    return args
-                end)
-                
-                if success and modifiedArgs then
-                    return oldNamecall(self, unpack(modifiedArgs))
                 end
             end
         end
-        return oldNamecall(self, ...)
+        return bestTarget
+    end
+
+    local lastClick = 0
+    UIS.InputBegan:Connect(function(input, gpe)
+        if not gpe and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            lastClick = tick()
+        end
+    end)
+
+    -- RAYCAST HOOK (Redirects the game's internal hit calculation)
+    local oldRaycast
+    oldRaycast = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        
+        if not checkcaller() and (method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList") and self == workspace then
+            if tick() - lastClick < 0.2 then
+                local target = GetSilentTarget()
+                if target then
+                    local args = {...}
+                    if method == "Raycast" then
+                        local origin, direction = args[1], args[2]
+                        if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                            args[2] = (target.Position - origin).Unit * direction.Magnitude
+                            lastShotTick = tick()
+                            if Vars.TracerEnabled then task.spawn(CreateTracer, origin, target.Position) end
+                            return oldRaycast(self, unpack(args))
+                        end
+                    elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                        local ray = args[1]
+                        if typeof(ray) == "Ray" then
+                            local newDir = (target.Position - ray.Origin).Unit * ray.Direction.Magnitude
+                            args[1] = Ray.new(ray.Origin, newDir)
+                            lastShotTick = tick()
+                            if Vars.TracerEnabled then task.spawn(CreateTracer, ray.Origin, target.Position) end
+                            return oldRaycast(self, unpack(args))
+                        end
+                    end
+                end
+            end
+        end
+        return oldRaycast(self, ...)
+    end)
+    
+    -- MOUSE HOOK (Fallback if game uses mouse.Hit)
+    local mouse = LP:GetMouse()
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not checkcaller() and self == mouse then
+            if key == "Hit" or key == "Target" then
+                if tick() - lastClick < 0.2 then
+                    local target = GetSilentTarget()
+                    if target then
+                        if key == "Hit" then return CFrame.new(target.Position) end
+                        if key == "Target" then return target end
+                    end
+                end
+            end
+        end
+        return oldIndex(self, key)
     end)
 
     -- REGULAR AIMBOT
@@ -343,7 +371,7 @@ local function Part2()
         end)
     end)
 
-    -- ESP & CHAMS & SOUNDS (Working fine, leave untouched)
+    -- ESP & CHAMS & SOUNDS
     local ESPData = {}
     local function CreateESP(p)
         if ESPData[p] then return end
