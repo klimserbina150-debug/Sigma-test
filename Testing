@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition - Perfect GunFire Hook)
+-- Brisk Survival (True Silent Aim - Double Fire Bypass)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -11,8 +11,7 @@ local function Part1()
     local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
     local Window = Library:CreateWindow({
-        Title = "Brisk Survival",
-        Footer = "by @sigmatop1jj",
+        Title = "Brisk Survival", Footer = "by @sigmatop1jj",
         Center = true, AutoShow = true, Resizable = true,
     })
 
@@ -232,7 +231,7 @@ local function Part2()
         return bestTarget, bestPlayer
     end
 
-    -- ===================== THE PERFECT HOOK =====================
+    -- ===================== DOUBLE FIRE HOOK =====================
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
@@ -240,26 +239,29 @@ local function Part2()
         if not checkcaller() and method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
             local args = {...}
             
-            pcall(function()
-                -- args[1] is Origin, args[2] is TargetPos, args[6] is HitFlag, args[7] is UserID
-                if Vars.SilentAim and #args >= 7 and typeof(args[1]) == "Vector3" then
-                    local targetPart, targetPlayer = GetSilentTarget()
+            if Vars.SilentAim and #args >= 7 and typeof(args[1]) == "Vector3" then
+                local targetPart, targetPlayer = GetSilentTarget()
+                
+                if targetPart and targetPlayer then
+                    -- 1. Build the FAKE shot (Starts at the target's head, hits the target's head)
+                    local fakeArgs = table.clone(args)
+                    fakeArgs[1] = targetPart.Position + Vector3.new(0, 1, 0) -- Origin: Just above target
+                    fakeArgs[2] = targetPart.Position -- Target: The head
+                    fakeArgs[3] = Vector3.new(0, -1, 0) -- Gravity direction
+                    fakeArgs[6] = true -- Hit flag
+                    fakeArgs[7] = targetPlayer.UserId -- Victim ID
                     
-                    if targetPart and targetPlayer then
-                        -- Modify only what's necessary for the hit to register
-                        args[2] = targetPart.Position
-                        args[6] = true
-                        args[7] = targetPlayer.UserId
-                        
-                        lastShotTick = tick()
-                        if Vars.TracerEnabled then
-                            task.spawn(CreateTracer, args[1], targetPart.Position)
-                        end
+                    -- Send the fake shot FIRST so the server registers the damage
+                    oldNamecall(self, unpack(fakeArgs))
+                    
+                    lastShotTick = tick()
+                    if Vars.TracerEnabled then
+                        task.spawn(CreateTracer, args[1], targetPart.Position)
                     end
                 end
-            end)
+            end
             
-            -- Always pass it to the original function so the gun never breaks
+            -- 2. Send the ORIGINAL shot so the client script doesn't hang and plays the animation
             return oldNamecall(self, unpack(args))
         end
         
