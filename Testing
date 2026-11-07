@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition - Stable Silent Aim)
+-- Brisk Survival (Mouse Hook Edition)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -46,25 +46,18 @@ local function Part1()
     end
 
     local Vars = {
-        -- Silent Aim
         SilentAim = true, SilentAimTarget = "Head", SilentAimFov = 300, SilentAimTeamCheck = true,
         SilentAimVisibleCheck = true,
-        -- Aimbot
         AimbotEnabled = false, AimbotKeybind = "MouseButton2", AimbotAlways = false,
         AimbotTarget = "Head", AimbotFov = 150, AimbotSmoothness = 5, AimbotPrediction = 0.165,
         AimbotVisibleCheck = true, AimbotMaxDist = 1000,
         FovCircleEnabled = true, FovCircleFilled = false, FovCircleThickness = 2,
         FovCircleRainbow = false, FovCircleColor = Color3.fromRGB(255, 255, 255),
-        -- ESP
         ESPBox = false, ESPName = false, ESPHealth = false, ESPMaxDist = 1000,
-        -- Chams & Tracers
         ChamsEnabled = false, ChamsColor = Color3.fromRGB(255, 0, 0),
         TracerEnabled = false, TracerColor = Color3.fromRGB(180, 100, 255),
-        -- Sounds
         HitSoundEnabled = false, HitSoundChoice = "Skeet",
-        -- World
         Fullbright = false, Crosshair = false,
-        -- Cosmetics
         SkinChanger = false, SkinColor = Color3.fromRGB(0, 255, 255),
     }
 
@@ -78,19 +71,14 @@ local function Part1()
         box:AddLabel(text):AddColorPicker(key, { Default = default or Vars[key], Callback = function(v) Vars[key] = v end })
     end
 
-    local HSList = {
-        ["None"] = "", ["Skeet"] = "rbxassetid://83717596220569",
-        ["Minecraft"] = "rbxassetid://8766809464", ["Bell"] = "rbxassetid://123827281575056",
-        ["Fart"] = "rbxassetid://4809574295"
-    }
-    local HSNames = {"None", "Skeet", "Minecraft", "Bell", "Fart"}
+    local HSList = { ["None"] = "", ["Skeet"] = "rbxassetid://83717596220569", ["Minecraft"] = "rbxassetid://8766809464" }
+    local HSNames = {"None", "Skeet", "Minecraft"}
 
     local Combat = Window:AddTab("Combat")
     local Visuals = Window:AddTab("Visuals")
     local Cosmetics = Window:AddTab("Cosmetics")
     local Settings = Window:AddTab("Settings")
 
-    -- COMBAT
     local SG = Combat:AddLeftGroupbox("Silent Aim")
     T(SG, "SilentAim", "Enable Silent Aim", true)
     SG:AddDropdown("SilentAimTarget", { Text = "Target Part", Values = {"Head", "Torso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) Vars.SilentAimTarget = v end })
@@ -118,7 +106,6 @@ local function Part1()
     T(FOVC, "FovCircleRainbow", "Rainbow", false)
     C(FOVC, "FovCircleColor", "Color", Color3.fromRGB(255, 255, 255))
 
-    -- VISUALS
     local VG = Visuals:AddLeftGroupbox("Player ESP")
     T(VG, "ESPBox", "Box", false)
     T(VG, "ESPName", "Name", false)
@@ -140,12 +127,10 @@ local function Part1()
     T(VG4, "Fullbright", "Fullbright", false)
     T(VG4, "Crosshair", "Crosshair", false)
 
-    -- COSMETICS
     local CosmG = Cosmetics:AddLeftGroupbox("Skin Changer")
     T(CosmG, "SkinChanger", "Enable Skin (ForceField)", false)
     C(CosmG, "SkinColor", "Skin Color", Color3.fromRGB(0, 255, 255))
 
-    -- SETTINGS
     local MenuG = Settings:AddLeftGroupbox("Menu")
     MenuG:AddButton("Unload", function()
         pcall(function() Library:Unload() end)
@@ -177,7 +162,6 @@ local function Part2()
     local lastShotTick = 0
     local activeTracers = {}
 
-    -- TRACERS LOGIC
     local function CreateTracer(startPos, endPos)
         local part = Instance.new("Part")
         part.Anchored = true; part.CanCollide = false; part.Transparency = 1
@@ -207,7 +191,6 @@ local function Part2()
         end)
     end)
 
-    -- VISIBLE CHECK FUNCTION
     local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
     local function IsVisible(targetChar, targetPart)
         if not Vars.SilentAimVisibleCheck then return true end
@@ -222,61 +205,51 @@ local function Part2()
         return ok and result or false
     end
 
-    -- SILENT AIM HOOK (STABLE)
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        if not checkcaller() then
-            local method = getnamecallmethod()
-            if method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
-                local args = {...}
-                local success, modifiedArgs = pcall(function()
-                    if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
-                        local origin = args[1]
-                        local bestTarget, bestDist = nil, Vars.SilentAimFov
-                        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
+    local function GetSilentTarget()
+        if not Vars.SilentAim then return nil end
+        local bestTarget, bestDist = nil, Vars.SilentAimFov
+        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p ~= LP and p.Character then
-                                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
-                                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
-                                if part then
-                                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                                    if hum and hum.Health > 0 then
-                                        if IsVisible(p.Character, part) then
-                                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
-                                            if onScreen then
-                                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                                if dist < bestDist then
-                                                    bestDist = dist; bestTarget = part
-                                                end
-                                            end
-                                        end
-                                    end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
+                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
+                if part then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        if IsVisible(p.Character, part) then
+                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
+                            if onScreen then
+                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                if dist < bestDist then
+                                    bestDist = dist; bestTarget = part
                                 end
                             end
                         end
-
-                        if bestTarget then
-                            local a = table.clone(args)
-                            a[2] = bestTarget.Position
-                            a[3] = (bestTarget.Position - origin).Unit
-                            lastShotTick = tick()
-                            if Vars.TracerEnabled then
-                                task.spawn(CreateTracer, origin, bestTarget.Position)
-                            end
-                            return a
-                        end
                     end
-                    lastShotTick = tick()
-                    return args
-                end)
-                
-                if success and modifiedArgs then
-                    return oldNamecall(self, unpack(modifiedArgs))
                 end
             end
         end
-        return oldNamecall(self, ...)
+        return bestTarget
+    end
+
+    -- SILENT AIM VIA MOUSE HIT HOOK
+    local mouse = LP:GetMouse()
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not checkcaller() then
+            if self == mouse and (key == "Hit" or key == "Target") then
+                local targetPart = GetSilentTarget()
+                if targetPart then
+                    if key == "Hit" then
+                        return CFrame.new(targetPart.Position)
+                    elseif key == "Target" then
+                        return targetPart
+                    end
+                end
+            end
+        end
+        return oldIndex(self, key)
     end)
 
     -- REGULAR AIMBOT
