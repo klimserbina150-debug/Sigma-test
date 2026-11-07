@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition)
+-- Brisk Survival (Full Edition - Visible Check Fix)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -48,6 +48,7 @@ local function Part1()
     local Vars = {
         -- Silent Aim
         SilentAim = true, SilentAimTarget = "Head", SilentAimFov = 300, SilentAimTeamCheck = true,
+        SilentAimVisibleCheck = true,
         -- Aimbot
         AimbotEnabled = false, AimbotKeybind = "MouseButton2", AimbotAlways = false,
         AimbotTarget = "Head", AimbotFov = 150, AimbotSmoothness = 5, AimbotPrediction = 0.165,
@@ -94,6 +95,7 @@ local function Part1()
     T(SG, "SilentAim", "Enable Silent Aim", true)
     SG:AddDropdown("SilentAimTarget", { Text = "Target Part", Values = {"Head", "Torso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) Vars.SilentAimTarget = v end })
     S(SG, "SilentAimFov", "FOV", 300, 10, 1000, 0)
+    T(SG, "SilentAimVisibleCheck", "Visible Check", true)
     T(SG, "SilentAimTeamCheck", "Team Check", true)
 
     local AG = Combat:AddRightGroupbox("Aimbot")
@@ -204,7 +206,22 @@ local function Part2()
         end)
     end)
 
-    -- SILENT AIM HOOK (The fixed one)
+    -- VISIBLE CHECK FUNCTION
+    local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
+    local function IsVisible(targetChar, targetPart)
+        if not Vars.SilentAimVisibleCheck then return true end
+        local ok, result = pcall(function()
+            local myChar = LP.Character; if not myChar then return false end
+            local params = RaycastParams.new()
+            params.FilterType = excludeEnum
+            params.FilterDescendantsInstances = {myChar, targetChar}
+            local res = workspace:Raycast(Cam.CFrame.Position, targetPart.Position - Cam.CFrame.Position, params)
+            return res == nil
+        end)
+        return ok and result or false
+    end
+
+    -- SILENT AIM HOOK (Fixed: No Origin Spoof, Visible Check Added)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
@@ -213,7 +230,7 @@ local function Part2()
             local args = {...}
             
             if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
-                local origin = args[1]
+                local origin = args[1] -- Use original origin (player's real position)
                 local bestTarget, bestPlayer, bestDist = nil, nil, Vars.SilentAimFov
                 local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
@@ -224,11 +241,14 @@ local function Part2()
                         if part then
                             local hum = p.Character:FindFirstChildOfClass("Humanoid")
                             if hum and hum.Health > 0 then
-                                local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
-                                if onScreen then
-                                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                    if dist < bestDist then
-                                        bestDist = dist; bestTarget = part; bestPlayer = p
+                                -- Check if visible
+                                if IsVisible(p.Character, part) then
+                                    local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
+                                    if onScreen then
+                                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                        if dist < bestDist then
+                                            bestDist = dist; bestTarget = part; bestPlayer = p
+                                        end
                                     end
                                 end
                             end
@@ -237,11 +257,10 @@ local function Part2()
                 end
 
                 if bestTarget and bestPlayer then
-                    -- Spoof origin so server thinks we are close to the target (bypasses wall check)
-                    local spoofedOrigin = bestTarget.Position + Vector3.new(0, 0, 5)
-                    args[1] = spoofedOrigin 
+                    -- Only modify target position, direction, and user ID
+                    -- Leave origin (args[1]) alone!
                     args[2] = bestTarget.Position
-                    args[3] = (bestTarget.Position - spoofedOrigin).Unit
+                    args[3] = (bestTarget.Position - origin).Unit
                     args[6] = true
                     args[7] = bestPlayer.UserId
                     
@@ -250,7 +269,6 @@ local function Part2()
                         task.spawn(CreateTracer, origin, bestTarget.Position)
                     end
                     
-                    -- Fire the remote with spoofed args
                     return oldNamecall(self, unpack(args))
                 end
             end
@@ -268,8 +286,7 @@ local function Part2()
         else return char:FindFirstChild("HumanoidRootPart") end
     end
 
-    local excludeEnum = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
-    local function IsVisible(targetChar, mode)
+    local function IsVisibleAimbot(targetChar, mode)
         local ok, result = pcall(function()
             local myChar = LP.Character; if not myChar then return false end
             local targetPart = GetTargetPart(targetChar, mode)
@@ -298,7 +315,7 @@ local function Part2()
                     if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 then
-                        if Vars.AimbotVisibleCheck and not IsVisible(p.Character, Vars.AimbotTarget) then continue end
+                        if Vars.AimbotVisibleCheck and not IsVisibleAimbot(p.Character, Vars.AimbotTarget) then continue end
                         local part = GetTargetPart(p.Character, Vars.AimbotTarget)
                         if part then
                             local pos, onScreen = Cam:WorldToViewportPoint(part.Position)
