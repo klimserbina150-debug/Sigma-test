@@ -1,4 +1,4 @@
--- Brisk Survival (Full Edition - Hybrid Silent Aim + Debug)
+-- Brisk Survival (Mouse Hook Edition)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -85,7 +85,6 @@ local function Part1()
     S(SG, "SilentAimFov", "FOV", 300, 10, 1000, 0)
     T(SG, "SilentAimVisibleCheck", "Visible Check", true)
     T(SG, "SilentAimTeamCheck", "Team Check", true)
-    SG:AddLabel("If Silent Aim doesn't work, check F9 for debug messages.")
 
     local AG = Combat:AddRightGroupbox("Aimbot")
     T(AG, "AimbotEnabled", "Enable Aimbot", false)
@@ -234,76 +233,18 @@ local function Part2()
         return bestTarget
     end
 
-    local lastClick = 0
-    UIS.InputBegan:Connect(function(input, gpe)
-        if not gpe and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            lastClick = tick()
-        end
-    end)
-
-    -- ==========================================
-    -- HOOK 1: workspace:Raycast (with proper filtering)
-    -- ==========================================
-    local oldRaycast
-    oldRaycast = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        
-        if not checkcaller() and (method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList") and self == workspace then
-            if tick() - lastClick < 0.25 then
-                local target = GetSilentTarget()
-                if target then
-                    print("[DEBUG] Silent Aim: Intercepted " .. method .. "!")
-                    local args = {...}
-                    if method == "Raycast" then
-                        local origin, direction = args[1], args[2]
-                        if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-                            -- Recalculate direction to target
-                            local newDir = (target.Position - origin).Unit * direction.Magnitude
-                            args[2] = newDir
-                            
-                            -- Fix RaycastParams to ignore walls between us and target
-                            if args[3] and typeof(args[3]) == "RaycastParams" then
-                                local params = args[3]
-                                local filter = params.FilterDescendantsInstances
-                                if typeof(filter) == "table" then
-                                    table.insert(filter, target.Parent) -- Ignore target's character (so ray hits it)
-                                end
-                            end
-                            
-                            lastShotTick = tick()
-                            if Vars.TracerEnabled then task.spawn(CreateTracer, origin, target.Position) end
-                            return oldRaycast(self, unpack(args))
-                        end
-                    elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-                        local ray = args[1]
-                        if typeof(ray) == "Ray" then
-                            local newDir = (target.Position - ray.Origin).Unit * ray.Direction.Magnitude
-                            args[1] = Ray.new(ray.Origin, newDir)
-                            lastShotTick = tick()
-                            if Vars.TracerEnabled then task.spawn(CreateTracer, ray.Origin, target.Position) end
-                            return oldRaycast(self, unpack(args))
-                        end
-                    end
-                end
-            end
-        end
-        return oldRaycast(self, ...)
-    end)
-    
-    -- ==========================================
-    -- HOOK 2: mouse.Hit / mouse.Target (Fallback)
-    -- ==========================================
+    -- SILENT AIM VIA MOUSE HIT HOOK
     local mouse = LP:GetMouse()
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if not checkcaller() and self == mouse then
-            if key == "Hit" or key == "Target" then
-                if tick() - lastClick < 0.25 then
-                    local target = GetSilentTarget()
-                    if target then
-                        print("[DEBUG] Silent Aim: Intercepted mouse." .. key .. "!")
-                        if key == "Hit" then return CFrame.new(target.Position) end
-                        if key == "Target" then return target end
+        if not checkcaller() then
+            if self == mouse and (key == "Hit" or key == "Target") then
+                local targetPart = GetSilentTarget()
+                if targetPart then
+                    if key == "Hit" then
+                        return CFrame.new(targetPart.Position)
+                    elseif key == "Target" then
+                        return targetPart
                     end
                 end
             end
@@ -390,8 +331,173 @@ local function Part2()
         end)
     end)
 
-    -- ESP & CHAMS & SOUNDS & COSMETICS (Leave as is, they work)
-    -- (Same as previous version, omitted for brevity but assumed to be intact)
+    -- ESP
+    local ESPData = {}
+    local function CreateESP(p)
+        if ESPData[p] then return end
+        ESPData[p] = {
+            Box = Drawing.new("Square"), Name = Drawing.new("Text"), Health = Drawing.new("Square")
+        }
+        ESPData[p].Box.Thickness = 1; ESPData[p].Box.Filled = false
+        ESPData[p].Name.Size = 14; ESPData[p].Name.Center = true; ESPData[p].Name.Outline = true
+        ESPData[p].Health.Thickness = 1; ESPData[p].Health.Filled = true
+    end
+    for _, p in ipairs(Players:GetPlayers()) do CreateESP(p) end
+    Players.PlayerAdded:Connect(CreateESP)
+
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            for p, data in pairs(ESPData) do
+                local hide = not Vars.ESPBox and not Vars.ESPName and not Vars.ESPHealth
+                if not myRoot or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then hide = true end
+                
+                if hide then
+                    data.Box.Visible = false; data.Name.Visible = false; data.Health.Visible = false
+                else
+                    local root = p.Character.HumanoidRootPart
+                    local head = p.Character:FindFirstChild("Head") or root
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    local dist = (myRoot.Position - root.Position).Magnitude
+                    
+                    if dist > Vars.ESPMaxDist then
+                        data.Box.Visible = false; data.Name.Visible = false; data.Health.Visible = false
+                    else
+                        local pos, onScreen = Cam:WorldToViewportPoint(root.Position)
+                        local headPos = Cam:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                        if not onScreen then
+                            data.Box.Visible = false; data.Name.Visible = false; data.Health.Visible = false
+                        else
+                            local height = math.abs(pos.Y - headPos.Y) * 2.2
+                            local width = height * 0.6
+                            
+                            data.Box.Visible = Vars.ESPBox
+                            data.Box.Color = Color3.fromRGB(255, 255, 255)
+                            data.Box.Size = Vector2.new(width, height)
+                            data.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                            
+                            data.Name.Visible = Vars.ESPName
+                            data.Name.Text = p.Name
+                            data.Name.Color = Color3.fromRGB(255, 255, 255)
+                            data.Name.Position = Vector2.new(pos.X, pos.Y - height/2 - 15)
+                            
+                            if Vars.ESPHealth and hum then
+                                data.Health.Visible = true
+                                local hp = hum.Health / hum.MaxHealth
+                                data.Health.Color = Color3.fromRGB(255*(1-hp), 255*hp, 0)
+                                data.Health.Size = Vector2.new(2, height * hp)
+                                data.Health.Position = Vector2.new(pos.X - width/2 - 4, (pos.Y - height/2) + (height * (1-hp)))
+                            else
+                                data.Health.Visible = false
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end)
+
+    -- CHAMS
+    local ChamsData = {}
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p == LP then continue end
+                local show = Vars.ChamsEnabled and p.Character
+                if show then
+                    if not ChamsData[p] or not ChamsData[p].Parent then
+                        local h = Instance.new("Highlight")
+                        h.Name = "BriskChams"; h.Parent = p.Character
+                        h.FillColor = Vars.ChamsColor
+                        h.OutlineColor = Color3.new(1,1,1)
+                        h.FillTransparency = 0.5; h.OutlineTransparency = 0
+                        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        ChamsData[p] = h
+                    else
+                        ChamsData[p].FillColor = Vars.ChamsColor
+                    end
+                else
+                    if ChamsData[p] and ChamsData[p].Parent then
+                        ChamsData[p]:Destroy()
+                        ChamsData[p] = nil
+                    end
+                end
+            end
+        end)
+    end)
+
+    -- HIT SOUNDS
+    local function PlayHitSound()
+        if not Vars.HitSoundEnabled or Vars.HitSoundChoice == "None" then return end
+        local id = HSList[Vars.HitSoundChoice]
+        if id and id ~= "" then
+            local snd = Instance.new("Sound")
+            snd.SoundId = id; snd.Volume = 1
+            snd.Parent = LP.Character or workspace
+            snd:Play()
+            task.delay(2, function() snd:Destroy() end)
+        end
+    end
+
+    local function TrackDamage(p)
+        if p == LP then return end
+        local function bind(char)
+            local hum = char:WaitForChild("Humanoid", 5)
+            if not hum then return end
+            local prevHP = hum.Health
+            hum.HealthChanged:Connect(function(newHP)
+                if newHP < prevHP and tick() - lastShotTick < 0.5 then
+                    PlayHitSound()
+                end
+                prevHP = newHP
+            end)
+        end
+        if p.Character then bind(p.Character) end
+        p.CharacterAdded:Connect(bind)
+    end
+    for _, p in ipairs(Players:GetPlayers()) do TrackDamage(p) end
+    Players.PlayerAdded:Connect(TrackDamage)
+
+    -- COSMETICS (SKIN)
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            if Vars.SkinChanger and LP.Character then
+                for _, part in ipairs(LP.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.Material = Enum.Material.ForceField
+                        part.Color = Vars.SkinColor
+                    end
+                end
+            end
+        end)
+    end)
+
+    -- WORLD & CROSSHAIR
+    local DefBright = Lighting.Brightness
+    local DefAmbient = Lighting.OutdoorAmbient
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            if Vars.Fullbright then
+                Lighting.Brightness = 2; Lighting.OutdoorAmbient = Color3.new(1,1,1)
+            else
+                Lighting.Brightness = DefBright; Lighting.OutdoorAmbient = DefAmbient
+            end
+        end)
+    end)
+
+    local chH = Drawing.new("Line"); chH.Thickness = 1.5; chH.Color = Color3.new(1,1,1)
+    local chV = Drawing.new("Line"); chV.Thickness = 1.5; chV.Color = Color3.new(1,1,1)
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            if Vars.Crosshair then
+                local c = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+                chH.From = c + Vector2.new(-6, 0); chH.To = c + Vector2.new(6, 0); chH.Visible = true
+                chV.From = c + Vector2.new(0, -6); chV.To = c + Vector2.new(0, 6); chV.Visible = true
+            else
+                chH.Visible = false; chV.Visible = false
+            end
+        end)
+    end)
 end
 
 Part1()
