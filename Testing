@@ -1,4 +1,4 @@
--- Brisk Survival Lite (Full Version)
+-- Brisk Survival (Full Edition)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -11,7 +11,7 @@ local function Part1()
     local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
     local Window = Library:CreateWindow({
-        Title = "Brisk Lite",
+        Title = "Brisk Survival",
         Footer = "by @sigmatop1jj",
         Center = true, AutoShow = true, Resizable = true,
     })
@@ -46,16 +46,22 @@ local function Part1()
     end
 
     local Vars = {
-        -- Combat
+        -- Silent Aim
         SilentAim = true, SilentAimTarget = "Head", SilentAimFov = 300, SilentAimTeamCheck = true,
+        -- Aimbot
         AimbotEnabled = false, AimbotKeybind = "MouseButton2", AimbotAlways = false,
-        AimbotTarget = "Head", AimbotFov = 200, AimbotSmoothness = 5, AimbotPrediction = 0.165,
+        AimbotTarget = "Head", AimbotFov = 150, AimbotSmoothness = 5, AimbotPrediction = 0.165,
         AimbotVisibleCheck = true, AimbotMaxDist = 1000,
-        -- Visuals
+        FovCircleEnabled = true, FovCircleFilled = false, FovCircleThickness = 2,
+        FovCircleRainbow = false, FovCircleColor = Color3.fromRGB(255, 255, 255),
+        -- ESP
         ESPBox = false, ESPName = false, ESPHealth = false, ESPMaxDist = 1000,
+        -- Chams & Tracers
         ChamsEnabled = false, ChamsColor = Color3.fromRGB(255, 0, 0),
         TracerEnabled = false, TracerColor = Color3.fromRGB(180, 100, 255),
+        -- Sounds
         HitSoundEnabled = false, HitSoundChoice = "Skeet",
+        -- World
         Fullbright = false, Crosshair = false,
         -- Cosmetics
         SkinChanger = false, SkinColor = Color3.fromRGB(0, 255, 255),
@@ -72,11 +78,9 @@ local function Part1()
     end
 
     local HSList = {
-        ["None"] = "",
-        ["Skeet"] = "rbxassetid://83717596220569",
-        ["Minecraft"] = "rbxassetid://8766809464",
-        ["Bell"] = "rbxassetid://123827281575056",
-        ["Fart"] = "rbxassetid://4809574295",
+        ["None"] = "", ["Skeet"] = "rbxassetid://83717596220569",
+        ["Minecraft"] = "rbxassetid://8766809464", ["Bell"] = "rbxassetid://123827281575056",
+        ["Fart"] = "rbxassetid://4809574295"
     }
     local HSNames = {"None", "Skeet", "Minecraft", "Bell", "Fart"}
 
@@ -85,15 +89,14 @@ local function Part1()
     local Cosmetics = Window:AddTab("Cosmetics")
     local Settings = Window:AddTab("Settings")
 
-    -- COMBAT TAB
-    local CG = Combat:AddLeftGroupbox("Silent Aim")
-    T(CG, "SilentAim", "Enable Silent Aim", true)
-    CG:AddDropdown("SilentAimTarget", { Text = "Target Part", Values = {"Head", "Torso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) Vars.SilentAimTarget = v end })
-    S(CG, "SilentAimFov", "FOV", 300, 10, 1000, 0)
-    T(CG, "SilentAimTeamCheck", "Team Check", true)
-    CG:AddLabel("Hooks GunFire (Brisk)")
+    -- COMBAT
+    local SG = Combat:AddLeftGroupbox("Silent Aim")
+    T(SG, "SilentAim", "Enable Silent Aim", true)
+    SG:AddDropdown("SilentAimTarget", { Text = "Target Part", Values = {"Head", "Torso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) Vars.SilentAimTarget = v end })
+    S(SG, "SilentAimFov", "FOV", 300, 10, 1000, 0)
+    T(SG, "SilentAimTeamCheck", "Team Check", true)
 
-    local AG = Combat:AddRightGroupbox("Aimbot (Camera)")
+    local AG = Combat:AddRightGroupbox("Aimbot")
     T(AG, "AimbotEnabled", "Enable Aimbot", false)
     T(AG, "AimbotAlways", "Auto Aim (no key)", false)
     AG:AddLabel("Aim Keybind"):AddKeyPicker("AimKeybind", { Default = "MouseButton2", Text = "Aim Key", Callback = function(v)
@@ -101,11 +104,19 @@ local function Part1()
     end })
     AG:AddDropdown("AimbotTarget", { Text = "Target Part", Values = {"Head", "Torso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) Vars.AimbotTarget = v end })
     T(AG, "AimbotVisibleCheck", "Visible Check", true)
-    S(AG, "AimbotFov", "FOV", 200, 10, 800, 0)
+    S(AG, "AimbotFov", "FOV", 150, 10, 800, 0)
+    S(AG, "AimbotMaxDist", "Max Distance", 1000, 100, 5000, 0)
     S(AG, "AimbotSmoothness", "Smoothness", 5, 1, 20, 0)
     S(AG, "AimbotPrediction", "Prediction", 0.165, 0, 0.5, 3)
 
-    -- VISUALS TAB
+    local FOVC = Combat:AddRightGroupbox("Aim FOV Circle")
+    T(FOVC, "FovCircleEnabled", "Show Circle", true)
+    T(FOVC, "FovCircleFilled", "Filled", false)
+    S(FOVC, "FovCircleThickness", "Thickness", 2, 1, 10, 0)
+    T(FOVC, "FovCircleRainbow", "Rainbow", false)
+    C(FOVC, "FovCircleColor", "Color", Color3.fromRGB(255, 255, 255))
+
+    -- VISUALS
     local VG = Visuals:AddLeftGroupbox("Player ESP")
     T(VG, "ESPBox", "Box", false)
     T(VG, "ESPName", "Name", false)
@@ -127,14 +138,14 @@ local function Part1()
     T(VG4, "Fullbright", "Fullbright", false)
     T(VG4, "Crosshair", "Crosshair", false)
 
-    -- COSMETICS TAB
+    -- COSMETICS
     local CosmG = Cosmetics:AddLeftGroupbox("Skin Changer")
     T(CosmG, "SkinChanger", "Enable Skin (ForceField)", false)
     C(CosmG, "SkinColor", "Skin Color", Color3.fromRGB(0, 255, 255))
 
-    -- SETTINGS TAB
-    local SG = Settings:AddLeftGroupbox("Menu")
-    SG:AddButton("Unload", function()
+    -- SETTINGS
+    local MenuG = Settings:AddLeftGroupbox("Menu")
+    MenuG:AddButton("Unload", function()
         pcall(function() Library:Unload() end)
         getgenv().BriskLoaded = nil
     end)
@@ -143,8 +154,8 @@ local function Part1()
     SaveManager:SetLibrary(Library)
     SaveManager:IgnoreThemeSettings()
     SaveManager:SetIgnoreIndexes({ "AimKeybind" })
-    ThemeManager:SetFolder("BriskLite")
-    SaveManager:SetFolder("BriskLite")
+    ThemeManager:SetFolder("BriskSurvival")
+    SaveManager:SetFolder("BriskSurvival")
     SaveManager:BuildConfigSection(Settings)
     ThemeManager:ApplyToTab(Settings)
     SaveManager:LoadAutoloadConfig()
@@ -164,7 +175,7 @@ local function Part2()
     local lastShotTick = 0
     local activeTracers = {}
 
-    -- ===================== SILENT AIM & TRACERS =====================
+    -- TRACERS LOGIC
     local function CreateTracer(startPos, endPos)
         local part = Instance.new("Part")
         part.Anchored = true; part.CanCollide = false; part.Transparency = 1
@@ -182,18 +193,22 @@ local function Part2()
     end
 
     RunService.Heartbeat:Connect(function()
-        for i = #activeTracers, 1, -1 do
-            local t = activeTracers[i]
-            if tick() - t.born > 0.4 then
-                t.part:Destroy()
-                table.remove(activeTracers, i)
+        pcall(function()
+            for i = #activeTracers, 1, -1 do
+                local t = activeTracers[i]
+                if tick() - t.born > 0.4 then
+                    t.part:Destroy()
+                    table.remove(activeTracers, i)
+                end
             end
-        end
+        end)
     end)
 
+    -- SILENT AIM HOOK (The fixed one)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
+        
         if not checkcaller() and method == "FireServer" and self.Name == "GunFire" then
             local args = {...}
             
@@ -222,8 +237,11 @@ local function Part2()
                 end
 
                 if bestTarget and bestPlayer then
+                    -- Spoof origin so server thinks we are close to the target (bypasses wall check)
+                    local spoofedOrigin = bestTarget.Position + Vector3.new(0, 0, 5)
+                    args[1] = spoofedOrigin 
                     args[2] = bestTarget.Position
-                    args[3] = (bestTarget.Position - origin).Unit
+                    args[3] = (bestTarget.Position - spoofedOrigin).Unit
                     args[6] = true
                     args[7] = bestPlayer.UserId
                     
@@ -231,6 +249,8 @@ local function Part2()
                     if Vars.TracerEnabled then
                         task.spawn(CreateTracer, origin, bestTarget.Position)
                     end
+                    
+                    -- Fire the remote with spoofed args
                     return oldNamecall(self, unpack(args))
                 end
             end
@@ -239,7 +259,7 @@ local function Part2()
         return oldNamecall(self, ...)
     end)
 
-    -- ===================== REGULAR AIMBOT =====================
+    -- REGULAR AIMBOT
     local function GetTargetPart(char, mode)
         if not char then return nil end
         mode = mode or "Head"
@@ -302,7 +322,24 @@ local function Part2()
         end)
     end)
 
-    -- ===================== ESP & CHAMS =====================
+    -- FOV CIRCLE
+    local FovCircle = Drawing.new("Circle")
+    FovCircle.Visible = false; FovCircle.Transparency = 1; FovCircle.NumSides = 60
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            if not Vars.FovCircleEnabled then FovCircle.Visible = false; return end
+            local color = Vars.FovCircleColor
+            if Vars.FovCircleRainbow then color = Color3.fromHSV((tick()*0.5)%1, 1, 1) end
+            FovCircle.Visible = true
+            FovCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+            FovCircle.Radius = Vars.AimbotFov
+            FovCircle.Thickness = Vars.FovCircleThickness
+            FovCircle.Filled = Vars.FovCircleFilled
+            FovCircle.Color = color
+        end)
+    end)
+
+    -- ESP & CHAMS
     local ESPData = {}
     local ChamsData = {}
     
@@ -371,7 +408,6 @@ local function Part2()
         end)
     end)
 
-    -- CHAMS LOGIC
     RunService.Heartbeat:Connect(function()
         pcall(function()
             for _, p in ipairs(Players:GetPlayers()) do
@@ -399,7 +435,7 @@ local function Part2()
         end)
     end)
 
-    -- ===================== HIT SOUNDS =====================
+    -- HIT SOUNDS
     local function PlayHitSound()
         if not Vars.HitSoundEnabled or Vars.HitSoundChoice == "None" then return end
         local id = HSList[Vars.HitSoundChoice]
@@ -431,7 +467,7 @@ local function Part2()
     for _, p in ipairs(Players:GetPlayers()) do TrackDamage(p) end
     Players.PlayerAdded:Connect(TrackDamage)
 
-    -- ===================== COSMETICS (SKIN) =====================
+    -- COSMETICS (SKIN)
     RunService.Heartbeat:Connect(function()
         pcall(function()
             if Vars.SkinChanger and LP.Character then
@@ -445,7 +481,7 @@ local function Part2()
         end)
     end)
 
-    -- ===================== WORLD & CROSSHAIR =====================
+    -- WORLD & CROSSHAIR
     local DefBright = Lighting.Brightness
     local DefAmbient = Lighting.OutdoorAmbient
     RunService.Heartbeat:Connect(function()
