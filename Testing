@@ -1,4 +1,4 @@
--- Brisk Survival (Mouse Hook Edition)
+-- Brisk Survival (Full Edition - Pure Silent Aim)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -205,51 +205,63 @@ local function Part2()
         return ok and result or false
     end
 
-    local function GetSilentTarget()
-        if not Vars.SilentAim then return nil end
-        local bestTarget, bestDist = nil, Vars.SilentAimFov
-        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
+    -- SILENT AIM HOOK (Only trajectory change, no flag spoofing)
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        if not checkcaller() then
+            local method = getnamecallmethod()
+            if method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
+                local args = {...}
+                local success, modifiedArgs = pcall(function()
+                    if Vars.SilentAim and args[1] and typeof(args[1]) == "Vector3" then
+                        local origin = args[1]
+                        local bestTarget, bestDist = nil, Vars.SilentAimFov
+                        local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character then
-                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
-                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
-                if part then
-                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
-                        if IsVisible(p.Character, part) then
-                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
-                            if onScreen then
-                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                if dist < bestDist then
-                                    bestDist = dist; bestTarget = part
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LP and p.Character then
+                                if Vars.SilentAimTeamCheck and p.Team == LP.Team then continue end
+                                local part = p.Character:FindFirstChild(Vars.SilentAimTarget) or p.Character:FindFirstChild("HumanoidRootPart")
+                                if part then
+                                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                                    if hum and hum.Health > 0 then
+                                        if IsVisible(p.Character, part) then
+                                            local screenPos, onScreen = Cam:WorldToViewportPoint(part.Position)
+                                            if onScreen then
+                                                local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                                if dist < bestDist then
+                                                    bestDist = dist; bestTarget = part
+                                                end
+                                            end
+                                        end
+                                    end
                                 end
                             end
                         end
-                    end
-                end
-            end
-        end
-        return bestTarget
-    end
 
-    -- SILENT AIM VIA MOUSE HIT HOOK
-    local mouse = LP:GetMouse()
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if not checkcaller() then
-            if self == mouse and (key == "Hit" or key == "Target") then
-                local targetPart = GetSilentTarget()
-                if targetPart then
-                    if key == "Hit" then
-                        return CFrame.new(targetPart.Position)
-                    elseif key == "Target" then
-                        return targetPart
+                        if bestTarget then
+                            local a = table.clone(args)
+                            -- Only modify target and direction. Do not touch args[6] or args[7].
+                            a[2] = bestTarget.Position
+                            a[3] = (bestTarget.Position - args[1]).Unit
+                            
+                            lastShotTick = tick()
+                            if Vars.TracerEnabled then
+                                task.spawn(CreateTracer, args[1], bestTarget.Position)
+                            end
+                            return a
+                        end
                     end
+                    lastShotTick = tick()
+                    return args
+                end)
+                
+                if success and modifiedArgs then
+                    return oldNamecall(self, unpack(modifiedArgs))
                 end
             end
         end
-        return oldIndex(self, key)
+        return oldNamecall(self, ...)
     end)
 
     -- REGULAR AIMBOT
@@ -331,7 +343,7 @@ local function Part2()
         end)
     end)
 
-    -- ESP
+    -- ESP & CHAMS & SOUNDS (Working fine, leave untouched)
     local ESPData = {}
     local function CreateESP(p)
         if ESPData[p] then return end
@@ -397,7 +409,6 @@ local function Part2()
         end)
     end)
 
-    -- CHAMS
     local ChamsData = {}
     RunService.Heartbeat:Connect(function()
         pcall(function()
@@ -426,7 +437,6 @@ local function Part2()
         end)
     end)
 
-    -- HIT SOUNDS
     local function PlayHitSound()
         if not Vars.HitSoundEnabled or Vars.HitSoundChoice == "None" then return end
         local id = HSList[Vars.HitSoundChoice]
@@ -458,7 +468,6 @@ local function Part2()
     for _, p in ipairs(Players:GetPlayers()) do TrackDamage(p) end
     Players.PlayerAdded:Connect(TrackDamage)
 
-    -- COSMETICS (SKIN)
     RunService.Heartbeat:Connect(function()
         pcall(function()
             if Vars.SkinChanger and LP.Character then
@@ -472,7 +481,6 @@ local function Part2()
         end)
     end)
 
-    -- WORLD & CROSSHAIR
     local DefBright = Lighting.Brightness
     local DefAmbient = Lighting.OutdoorAmbient
     RunService.Heartbeat:Connect(function()
