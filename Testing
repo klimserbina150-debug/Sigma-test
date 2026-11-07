@@ -1,4 +1,4 @@
--- Brisk Survival (Mouse Hook Edition)
+-- Brisk Survival (Full Edition - Perfect GunFire Hook)
 -- by @sigmatop1jj
 
 if getgenv().BriskLoaded then return end
@@ -206,8 +206,7 @@ local function Part2()
     end
 
     local function GetSilentTarget()
-        if not Vars.SilentAim then return nil end
-        local bestTarget, bestDist = nil, Vars.SilentAimFov
+        local bestTarget, bestPlayer, bestDist = nil, nil, Vars.SilentAimFov
         local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
 
         for _, p in ipairs(Players:GetPlayers()) do
@@ -222,7 +221,7 @@ local function Part2()
                             if onScreen then
                                 local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
                                 if dist < bestDist then
-                                    bestDist = dist; bestTarget = part
+                                    bestDist = dist; bestTarget = part; bestPlayer = p
                                 end
                             end
                         end
@@ -230,26 +229,41 @@ local function Part2()
                 end
             end
         end
-        return bestTarget
+        return bestTarget, bestPlayer
     end
 
-    -- SILENT AIM VIA MOUSE HIT HOOK
-    local mouse = LP:GetMouse()
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if not checkcaller() then
-            if self == mouse and (key == "Hit" or key == "Target") then
-                local targetPart = GetSilentTarget()
-                if targetPart then
-                    if key == "Hit" then
-                        return CFrame.new(targetPart.Position)
-                    elseif key == "Target" then
-                        return targetPart
+    -- ===================== THE PERFECT HOOK =====================
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        
+        if not checkcaller() and method == "FireServer" and typeof(self) == "Instance" and self.Name == "GunFire" then
+            local args = {...}
+            
+            pcall(function()
+                -- args[1] is Origin, args[2] is TargetPos, args[6] is HitFlag, args[7] is UserID
+                if Vars.SilentAim and #args >= 7 and typeof(args[1]) == "Vector3" then
+                    local targetPart, targetPlayer = GetSilentTarget()
+                    
+                    if targetPart and targetPlayer then
+                        -- Modify only what's necessary for the hit to register
+                        args[2] = targetPart.Position
+                        args[6] = true
+                        args[7] = targetPlayer.UserId
+                        
+                        lastShotTick = tick()
+                        if Vars.TracerEnabled then
+                            task.spawn(CreateTracer, args[1], targetPart.Position)
+                        end
                     end
                 end
-            end
+            end)
+            
+            -- Always pass it to the original function so the gun never breaks
+            return oldNamecall(self, unpack(args))
         end
-        return oldIndex(self, key)
+        
+        return oldNamecall(self, ...)
     end)
 
     -- REGULAR AIMBOT
@@ -331,7 +345,7 @@ local function Part2()
         end)
     end)
 
-    -- ESP
+    -- ESP & CHAMS & SOUNDS & COSMETICS
     local ESPData = {}
     local function CreateESP(p)
         if ESPData[p] then return end
@@ -397,7 +411,6 @@ local function Part2()
         end)
     end)
 
-    -- CHAMS
     local ChamsData = {}
     RunService.Heartbeat:Connect(function()
         pcall(function()
@@ -426,7 +439,6 @@ local function Part2()
         end)
     end)
 
-    -- HIT SOUNDS
     local function PlayHitSound()
         if not Vars.HitSoundEnabled or Vars.HitSoundChoice == "None" then return end
         local id = HSList[Vars.HitSoundChoice]
@@ -458,7 +470,6 @@ local function Part2()
     for _, p in ipairs(Players:GetPlayers()) do TrackDamage(p) end
     Players.PlayerAdded:Connect(TrackDamage)
 
-    -- COSMETICS (SKIN)
     RunService.Heartbeat:Connect(function()
         pcall(function()
             if Vars.SkinChanger and LP.Character then
@@ -472,7 +483,6 @@ local function Part2()
         end)
     end)
 
-    -- WORLD & CROSSHAIR
     local DefBright = Lighting.Brightness
     local DefAmbient = Lighting.OutdoorAmbient
     RunService.Heartbeat:Connect(function()
