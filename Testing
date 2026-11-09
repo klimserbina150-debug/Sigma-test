@@ -1,8 +1,8 @@
--- Cyrax UI (Custom Built)
+-- SYNTH UI (S Logo, Neon Glow, Smooth)
 -- by @sigmatop1jj
 
-if getgenv().CyraxLoaded then return end
-getgenv().CyraxLoaded = true
+if getgenv().SynthLoaded then return end
+getgenv().SynthLoaded = true
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,7 +14,6 @@ local Cam = workspace.CurrentCamera
 local Vars = {
     MenuKey = Enum.KeyCode.RightShift,
     AimbotEnabled = false,
-    AimbotKeybind = Enum.KeyCode.E,
     AimbotFov = 150,
     AimbotSmoothness = 5,
     ESPBox = false,
@@ -25,26 +24,26 @@ local Vars = {
 
 local Themes = {
     Dark = {
-        Main = Color3.fromRGB(15, 15, 18),
-        Secondary = Color3.fromRGB(24, 24, 30),
-        Element = Color3.fromRGB(32, 32, 40),
+        Main = Color3.fromRGB(10, 10, 12),
+        Secondary = Color3.fromRGB(18, 18, 22),
+        Element = Color3.fromRGB(28, 28, 35),
         Stroke = Color3.fromRGB(45, 45, 55),
-        Text = Color3.fromRGB(240, 240, 240),
+        Text = Color3.fromRGB(245, 245, 245),
         SubText = Color3.fromRGB(140, 140, 150),
     },
     Light = {
-        Main = Color3.fromRGB(245, 245, 250),
-        Secondary = Color3.fromRGB(230, 230, 240),
-        Element = Color3.fromRGB(215, 215, 228),
-        Stroke = Color3.fromRGB(190, 190, 205),
-        Text = Color3.fromRGB(20, 20, 30),
-        SubText = Color3.fromRGB(100, 100, 120),
+        Main = Color3.fromRGB(240, 240, 245),
+        Secondary = Color3.fromRGB(225, 225, 235),
+        Element = Color3.fromRGB(210, 210, 220),
+        Stroke = Color3.fromRGB(180, 180, 190),
+        Text = Color3.fromRGB(15, 15, 20),
+        SubText = Color3.fromRGB(100, 100, 110),
     }
 }
 
 -- ===== GUI =====
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "CyraxUI"
+Gui.Name = "SynthUI"
 Gui.ResetOnSpawn = false
 Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 100
@@ -54,13 +53,12 @@ if not Gui.Parent then Gui.Parent = LP:WaitForChild("PlayerGui") end
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.new(0, 500, 0, 380)
-Main.Position = UDim2.new(0.5, -250, 0.5, -190)
+Main.Size = UDim2.new(0, 600, 0, 450)
+Main.Position = UDim2.new(0.5, -300, 0.5, -225)
 Main.BackgroundColor3 = Themes.Dark.Main
 Main.BorderSizePixel = 0
-Main.Visible = true
 Main.Parent = Gui
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 6)
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Themes.Dark.Stroke
@@ -69,13 +67,13 @@ MainStroke.Parent = Main
 
 -- Header
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 52)
+Header.Size = UDim2.new(1, 0, 0, 60)
 Header.BackgroundColor3 = Themes.Dark.Secondary
 Header.BorderSizePixel = 0
+Header.ClipsDescendants = true
 Header.Parent = Main
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 6)
 
--- Bottom square fix for header
 local HeaderFix = Instance.new("Frame")
 HeaderFix.Size = UDim2.new(1, 0, 0, 6)
 HeaderFix.Position = UDim2.new(0, 0, 1, -6)
@@ -83,117 +81,177 @@ HeaderFix.BackgroundColor3 = Themes.Dark.Secondary
 HeaderFix.BorderSizePixel = 0
 HeaderFix.Parent = Header
 
--- ==== "C" LOGO (neon purple snake-like) ====
+-- Header Glow Gradient (neon purple near logo, fades away)
+local HeaderGlow = Instance.new("UIGradient")
+HeaderGlow.Rotation = 135
+HeaderGlow.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Vars.AccentColor),
+    ColorSequenceKeypoint.new(0.5, Vars.AccentColor),
+    ColorSequenceKeypoint.new(1, Vars.AccentColor),
+})
+HeaderGlow.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.75),
+    NumberSequenceKeypoint.new(0.35, 0.92),
+    NumberSequenceKeypoint.new(1, 1),
+})
+HeaderGlow.Parent = Header
+
+-- ===== GLOW behind "S" Logo =====
+local GlowContainer = Instance.new("Frame")
+GlowContainer.Size = UDim2.new(0, 100, 0, 100)
+GlowContainer.Position = UDim2.new(0, -15, 0.5, -50)
+GlowContainer.BackgroundTransparency = 1
+GlowContainer.ZIndex = 1
+GlowContainer.Parent = Header
+
+local Glow1 = Instance.new("Frame")
+Glow1.Size = UDim2.new(1, 0, 1, 0)
+Glow1.BackgroundColor3 = Vars.AccentColor
+Glow1.BackgroundTransparency = 0.92
+Glow1.BorderSizePixel = 0
+Glow1.ZIndex = 1
+Glow1.Parent = GlowContainer
+Instance.new("UICorner", Glow1).CornerRadius = UDim.new(1, 0)
+
+local Glow2 = Instance.new("Frame")
+Glow2.Size = UDim2.new(0, 60, 0, 60)
+Glow2.Position = UDim2.new(0.5, -30, 0.5, -30)
+Glow2.BackgroundColor3 = Vars.AccentColor
+Glow2.BackgroundTransparency = 0.8
+Glow2.BorderSizePixel = 0
+Glow2.ZIndex = 1
+Glow2.Parent = GlowContainer
+Instance.new("UICorner", Glow2).CornerRadius = UDim.new(1, 0)
+
+-- Logo "S"
 local LogoFrame = Instance.new("Frame")
 LogoFrame.Size = UDim2.new(0, 40, 0, 40)
-LogoFrame.Position = UDim2.new(0, 10, 0.5, -20)
+LogoFrame.Position = UDim2.new(0, 15, 0.5, -20)
 LogoFrame.BackgroundTransparency = 1
+LogoFrame.ZIndex = 3
 LogoFrame.Parent = Header
 
--- glow behind
 local LogoGlow = Instance.new("TextLabel")
 LogoGlow.Size = UDim2.new(1, 0, 1, 0)
 LogoGlow.BackgroundTransparency = 1
-LogoGlow.Text = "C"
+LogoGlow.Text = "S"
 LogoGlow.Font = Enum.Font.GothamBlack
-LogoGlow.TextSize = 38
+LogoGlow.TextSize = 48
 LogoGlow.TextColor3 = Vars.AccentColor
 LogoGlow.TextTransparency = 0.6
+LogoGlow.ZIndex = 2
 LogoGlow.Parent = LogoFrame
 
 local Logo = Instance.new("TextLabel")
 Logo.Size = UDim2.new(1, 0, 1, 0)
 Logo.BackgroundTransparency = 1
-Logo.Text = "C"
+Logo.Text = "S"
 Logo.Font = Enum.Font.GothamBlack
-Logo.TextSize = 34
+Logo.TextSize = 38
 Logo.TextColor3 = Vars.AccentColor
-Logo.TextStrokeColor3 = Vars.AccentColor
-Logo.TextStrokeTransparency = 0.3
+Logo.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+Logo.TextStrokeTransparency = 0.7
+Logo.ZIndex = 3
 Logo.Parent = LogoFrame
 
 -- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 200, 0, 22)
-Title.Position = UDim2.new(0, 58, 0, 8)
+Title.Size = UDim2.new(0, 200, 0, 24)
+Title.Position = UDim2.new(0, 65, 0, 10)
 Title.BackgroundTransparency = 1
-Title.Text = "CYRAX"
+Title.Text = "SYNTH"
 Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 18
+Title.TextSize = 20
 Title.TextColor3 = Themes.Dark.Text
 Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 3
 Title.Parent = Header
 
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(0, 200, 0, 14)
-SubTitle.Position = UDim2.new(0, 58, 0, 28)
+SubTitle.Position = UDim2.new(0, 65, 0, 32)
 SubTitle.BackgroundTransparency = 1
 SubTitle.Text = "by @sigmatop1jj"
 SubTitle.Font = Enum.Font.GothamMedium
-SubTitle.TextSize = 11
+SubTitle.TextSize = 12
 SubTitle.TextColor3 = Themes.Dark.SubText
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.ZIndex = 3
 SubTitle.Parent = Header
 
 -- Close button
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 26, 0, 26)
-CloseBtn.Position = UDim2.new(1, -36, 0.5, -13)
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
 CloseBtn.BackgroundColor3 = Themes.Dark.Element
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Text = "×"
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 18
+CloseBtn.TextSize = 22
 CloseBtn.TextColor3 = Themes.Dark.SubText
 CloseBtn.AutoButtonColor = false
+CloseBtn.ZIndex = 5
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
 
 -- Sidebar
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 120, 1, -68)
-Sidebar.Position = UDim2.new(0, 10, 0, 60)
+Sidebar.Size = UDim2.new(0, 140, 1, -80)
+Sidebar.Position = UDim2.new(0, 15, 0, 70)
 Sidebar.BackgroundTransparency = 1
 Sidebar.Parent = Main
 
 local SidebarLayout = Instance.new("UIListLayout")
-SidebarLayout.Padding = UDim.new(0, 4)
+SidebarLayout.Padding = UDim.new(0, 6)
 SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarLayout.Parent = Sidebar
 
 -- Content
 local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -150, 1, -68)
-Content.Position = UDim2.new(0, 140, 0, 60)
+Content.Size = UDim2.new(1, -180, 1, -80)
+Content.Position = UDim2.new(0, 165, 0, 70)
 Content.BackgroundColor3 = Themes.Dark.Secondary
 Content.BorderSizePixel = 0
+Content.ClipsDescendants = true
 Content.Parent = Main
-Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 6)
+
+-- Content Glow
+local ContentGlow = Instance.new("UIGradient")
+ContentGlow.Rotation = 135
+ContentGlow.Color = ColorSequence.new(Vars.AccentColor)
+ContentGlow.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.9),
+    NumberSequenceKeypoint.new(0.4, 0.97),
+    NumberSequenceKeypoint.new(1, 1),
+})
+ContentGlow.Parent = Content
 
 -- ===== Helpers =====
 local Tabs = {}
 local CurrentTab = nil
 
+local smoothInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+
 local function CreateTab(name)
     local Btn = Instance.new("TextButton")
     Btn.Name = name .. "Tab"
-    Btn.Size = UDim2.new(1, 0, 0, 34)
+    Btn.Size = UDim2.new(1, 0, 0, 40)
     Btn.BackgroundColor3 = Themes.Dark.Secondary
     Btn.BorderSizePixel = 0
     Btn.Text = "   " .. name
     Btn.Font = Enum.Font.GothamMedium
-    Btn.TextSize = 13
+    Btn.TextSize = 14
     Btn.TextColor3 = Themes.Dark.SubText
     Btn.TextXAlignment = Enum.TextXAlignment.Left
     Btn.AutoButtonColor = false
     Btn.Parent = Sidebar
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
 
-    -- Purple accent bar (left side) - hidden by default
     local Accent = Instance.new("Frame")
     Accent.Name = "Accent"
-    Accent.Size = UDim2.new(0, 3, 0, 20)
-    Accent.Position = UDim2.new(0, 6, 0.5, -10)
+    Accent.Size = UDim2.new(0, 4, 0, 24)
+    Accent.Position = UDim2.new(0, 8, 0.5, -12)
     Accent.BackgroundColor3 = Vars.AccentColor
     Accent.BorderSizePixel = 0
     Accent.BackgroundTransparency = 1
@@ -201,8 +259,8 @@ local function CreateTab(name)
     Instance.new("UICorner", Accent).CornerRadius = UDim.new(1, 0)
 
     local Page = Instance.new("ScrollingFrame")
-    Page.Size = UDim2.new(1, -20, 1, -20)
-    Page.Position = UDim2.new(0, 10, 0, 10)
+    Page.Size = UDim2.new(1, -30, 1, -30)
+    Page.Position = UDim2.new(0, 15, 0, 15)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
     Page.ScrollBarThickness = 2
@@ -213,38 +271,51 @@ local function CreateTab(name)
     Page.Parent = Content
 
     local PageLayout = Instance.new("UIListLayout")
-    PageLayout.Padding = UDim.new(0, 6)
+    PageLayout.Padding = UDim.new(0, 8)
     PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
     PageLayout.Parent = Page
 
     Tabs[name] = { Button = Btn, Page = Page, Accent = Accent }
 
+    local function ShowPage()
+        Page.Position = UDim2.new(0, 35, 0, 15)
+        Page.Visible = true
+        TweenService:Create(Page, smoothInfo, {
+            Position = UDim2.new(0, 15, 0, 15)
+        }):Play()
+    end
+
+    local function HidePage()
+        Page.Visible = false
+        Page.Position = UDim2.new(0, 15, 0, 15)
+    end
+
     local function Select()
         for n, t in pairs(Tabs) do
-            TweenService:Create(t.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+            TweenService:Create(t.Button, smoothInfo, {
                 BackgroundColor3 = Themes.Dark.Secondary,
                 TextColor3 = Themes.Dark.SubText
             }):Play()
-            TweenService:Create(t.Accent, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
-            t.Page.Visible = false
+            TweenService:Create(t.Accent, smoothInfo, { BackgroundTransparency = 1 }):Play()
+            HidePage(t.Page)
         end
-        TweenService:Create(Btn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+        TweenService:Create(Btn, smoothInfo, {
             BackgroundColor3 = Themes.Dark.Element,
             TextColor3 = Themes.Dark.Text
         }):Play()
-        TweenService:Create(Accent, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
-        Page.Visible = true
+        TweenService:Create(Accent, smoothInfo, { BackgroundTransparency = 0 }):Play()
+        ShowPage()
         CurrentTab = name
     end
 
     Btn.MouseEnter:Connect(function()
         if CurrentTab ~= name then
-            TweenService:Create(Btn, TweenInfo.new(0.15), { BackgroundColor3 = Themes.Dark.Element }):Play()
+            TweenService:Create(Btn, TweenInfo.new(0.2), { BackgroundColor3 = Themes.Dark.Element }):Play()
         end
     end)
     Btn.MouseLeave:Connect(function()
         if CurrentTab ~= name then
-            TweenService:Create(Btn, TweenInfo.new(0.15), { BackgroundColor3 = Themes.Dark.Secondary }):Play()
+            TweenService:Create(Btn, TweenInfo.new(0.2), { BackgroundColor3 = Themes.Dark.Secondary }):Play()
         end
     end)
     Btn.MouseButton1Click:Connect(Select)
@@ -253,49 +324,50 @@ end
 
 local function CreateToggle(parent, name, default, callback)
     local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(1, 0, 0, 36)
+    Frame.Size = UDim2.new(1, 0, 0, 44)
     Frame.BackgroundColor3 = Themes.Dark.Element
     Frame.BorderSizePixel = 0
     Frame.Parent = parent
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
 
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Size = UDim2.new(1, -70, 1, 0)
+    Label.Position = UDim2.new(0, 15, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = name
     Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 13
+    Label.TextSize = 14
     Label.TextColor3 = Themes.Dark.Text
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Frame
 
     local Switch = Instance.new("Frame")
-    Switch.Size = UDim2.new(0, 38, 0, 20)
-    Switch.Position = UDim2.new(1, -50, 0.5, -10)
+    Switch.Size = UDim2.new(0, 44, 0, 24)
+    Switch.Position = UDim2.new(1, -60, 0.5, -12)
     Switch.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
     Switch.BorderSizePixel = 0
     Switch.Parent = Frame
-    Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 10)
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 12)
 
     local Dot = Instance.new("Frame")
-    Dot.Size = UDim2.new(0, 16, 0, 16)
-    Dot.Position = UDim2.new(0, 2, 0.5, -8)
+    Dot.Size = UDim2.new(0, 20, 0, 20)
+    Dot.Position = UDim2.new(0, 2, 0.5, -10)
     Dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
     Dot.BorderSizePixel = 0
     Dot.Parent = Switch
-    Instance.new("UICorner", Dot).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Dot).CornerRadius = UDim.new(0, 10)
 
     local state = default or false
+    local animInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
     local function Update(v)
         state = v
         if v then
-            TweenService:Create(Switch, TweenInfo.new(0.2, Enum.EasingStyle.Quart), { BackgroundColor3 = Vars.AccentColor }):Play()
-            TweenService:Create(Dot, TweenInfo.new(0.2, Enum.EasingStyle.Quart), { Position = UDim2.new(1, -18, 0.5, -8) }):Play()
+            TweenService:Create(Switch, animInfo, { BackgroundColor3 = Vars.AccentColor }):Play()
+            TweenService:Create(Dot, animInfo, { Position = UDim2.new(1, -22, 0.5, -10) }):Play()
         else
-            TweenService:Create(Switch, TweenInfo.new(0.2, Enum.EasingStyle.Quart), { BackgroundColor3 = Color3.fromRGB(50, 50, 60) }):Play()
-            TweenService:Create(Dot, TweenInfo.new(0.2, Enum.EasingStyle.Quart), { Position = UDim2.new(0, 2, 0.5, -8) }):Play()
+            TweenService:Create(Switch, animInfo, { BackgroundColor3 = Color3.fromRGB(50, 50, 60) }):Play()
+            TweenService:Create(Dot, animInfo, { Position = UDim2.new(0, 2, 0.5, -10) }):Play()
         end
         if callback then callback(v) end
     end
@@ -307,53 +379,53 @@ local function CreateToggle(parent, name, default, callback)
     Click.Parent = Frame
     Click.MouseButton1Click:Connect(function() Update(not state) end)
 
-    return { Set = Update, Get = function() return state end, Frame = Frame, Label = Label }
+    return { Set = Update, Get = function() return state end }
 end
 
 local function CreateSlider(parent, name, default, min, max, callback)
     local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(1, 0, 0, 50)
+    Frame.Size = UDim2.new(1, 0, 0, 60)
     Frame.BackgroundColor3 = Themes.Dark.Element
     Frame.BorderSizePixel = 0
     Frame.Parent = parent
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
 
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -60, 0, 20)
-    Label.Position = UDim2.new(0, 12, 0, 6)
+    Label.Size = UDim2.new(1, -70, 0, 22)
+    Label.Position = UDim2.new(0, 15, 0, 8)
     Label.BackgroundTransparency = 1
     Label.Text = name
     Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 13
+    Label.TextSize = 14
     Label.TextColor3 = Themes.Dark.Text
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Frame
 
     local ValueLabel = Instance.new("TextLabel")
-    ValueLabel.Size = UDim2.new(0, 50, 0, 20)
-    ValueLabel.Position = UDim2.new(1, -60, 0, 6)
+    ValueLabel.Size = UDim2.new(0, 60, 0, 22)
+    ValueLabel.Position = UDim2.new(1, -70, 0, 8)
     ValueLabel.BackgroundTransparency = 1
     ValueLabel.Text = tostring(default)
     ValueLabel.Font = Enum.Font.GothamBold
-    ValueLabel.TextSize = 13
+    ValueLabel.TextSize = 14
     ValueLabel.TextColor3 = Vars.AccentColor
     ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
     ValueLabel.Parent = Frame
 
     local BarBg = Instance.new("Frame")
-    BarBg.Size = UDim2.new(1, -24, 0, 5)
-    BarBg.Position = UDim2.new(0, 12, 0, 36)
+    BarBg.Size = UDim2.new(1, -30, 0, 6)
+    BarBg.Position = UDim2.new(0, 15, 0, 42)
     BarBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     BarBg.BorderSizePixel = 0
     BarBg.Parent = Frame
-    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 2)
+    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 3)
 
     local BarFill = Instance.new("Frame")
     BarFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     BarFill.BackgroundColor3 = Vars.AccentColor
     BarFill.BorderSizePixel = 0
     BarFill.Parent = BarBg
-    Instance.new("UICorner", BarFill).CornerRadius = UDim.new(0, 2)
+    Instance.new("UICorner", BarFill).CornerRadius = UDim.new(0, 3)
 
     local Click = Instance.new("TextButton")
     Click.Size = UDim2.new(1, 0, 1, 0)
@@ -362,18 +434,36 @@ local function CreateSlider(parent, name, default, min, max, callback)
     Click.Parent = Frame
 
     local value = default
-    Click.MouseButton1Click:Connect(function()
-        local mx = UIS:GetMouseLocation().X
+    local dragging = false
+
+    local function UpdateFromMouse(mouseX)
         local absPos = BarBg.AbsolutePosition.X
         local absSize = BarBg.AbsoluteSize.X
-        local percent = math.clamp((mx - absPos) / absSize, 0, 1)
+        local percent = math.clamp((mouseX - absPos) / absSize, 0, 1)
         value = math.floor((min + (max - min) * percent) + 0.5)
         ValueLabel.Text = tostring(value)
-        TweenService:Create(BarFill, TweenInfo.new(0.1), { Size = UDim2.new(percent, 0, 1, 0) }):Play()
+        TweenService:Create(BarFill, TweenInfo.new(0.08, Enum.EasingStyle.Linear), { Size = UDim2.new(percent, 0, 1, 0) }):Play()
         if callback then callback(value) end
+    end
+
+    Click.MouseButton1Down:Connect(function()
+        dragging = true
+        UpdateFromMouse(UIS:GetMouseLocation().X)
     end)
 
-    return { Get = function() return value end, Frame = Frame, Label = Label }
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            UpdateFromMouse(input.Position.X)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    return { Get = function() return value end }
 end
 
 -- ===== BUILD TABS =====
@@ -394,31 +484,20 @@ local SetPage = Tabs["Settings"].Page
 CreateToggle(SetPage, "Light Theme", false, function(v)
     local t = v and Themes.Light or Themes.Dark
     Vars.Theme = v and "Light" or "Dark"
-    TweenService:Create(Main, TweenInfo.new(0.3), { BackgroundColor3 = t.Main }):Play()
-    TweenService:Create(Header, TweenInfo.new(0.3), { BackgroundColor3 = t.Secondary }):Play()
-    TweenService:Create(HeaderFix, TweenInfo.new(0.3), { BackgroundColor3 = t.Secondary }):Play()
-    TweenService:Create(Content, TweenInfo.new(0.3), { BackgroundColor3 = t.Secondary }):Play()
-    TweenService:Create(MainStroke, TweenInfo.new(0.3), { Color = t.Stroke }):Play()
-    TweenService:Create(Title, TweenInfo.new(0.3), { TextColor3 = t.Text }):Play()
-    TweenService:Create(SubTitle, TweenInfo.new(0.3), { TextColor3 = t.SubText }):Play()
+    local themeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad)
+    TweenService:Create(Main, themeInfo, { BackgroundColor3 = t.Main }):Play()
+    TweenService:Create(Header, themeInfo, { BackgroundColor3 = t.Secondary }):Play()
+    TweenService:Create(HeaderFix, themeInfo, { BackgroundColor3 = t.Secondary }):Play()
+    TweenService:Create(Content, themeInfo, { BackgroundColor3 = t.Secondary }):Play()
+    TweenService:Create(MainStroke, themeInfo, { Color = t.Stroke }):Play()
+    TweenService:Create(Title, themeInfo, { TextColor3 = t.Text }):Play()
+    TweenService:Create(SubTitle, themeInfo, { TextColor3 = t.SubText }):Play()
     for _, tab in pairs(Tabs) do
-        TweenService:Create(tab.Button, TweenInfo.new(0.3), { BackgroundColor3 = t.Secondary }):Play()
+        TweenService:Create(tab.Button, themeInfo, { BackgroundColor3 = t.Secondary }):Play()
     end
 end)
 
 Tabs["Combat"].Button.MouseButton1Click()
--- force visual state
-for n, t in pairs(Tabs) do
-    t.Button.BackgroundColor3 = Themes.Dark.Secondary
-    t.Button.TextColor3 = Themes.Dark.SubText
-    t.Accent.BackgroundTransparency = 1
-    t.Page.Visible = false
-end
-Tabs["Combat"].Button.BackgroundColor3 = Themes.Dark.Element
-Tabs["Combat"].Button.TextColor3 = Themes.Dark.Text
-Tabs["Combat"].Accent.BackgroundTransparency = 0
-Tabs["Combat"].Page.Visible = true
-CurrentTab = "Combat"
 
 -- ===== DRAG =====
 local dragging, dragStart, startPos
@@ -440,20 +519,21 @@ UIS.InputEnded:Connect(function(input)
 end)
 
 -- Close button
-CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function()
+    Main.Visible = false
+end)
 CloseBtn.MouseEnter:Connect(function()
-    TweenService:Create(CloseBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(255, 80, 80), TextColor3 = Color3.new(1,1,1) }):Play()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(255, 80, 80), TextColor3 = Color3.new(1,1,1) }):Play()
 end)
 CloseBtn.MouseLeave:Connect(function()
     local bg = Vars.Theme == "Light" and Themes.Light.Element or Themes.Dark.Element
     local tx = Vars.Theme == "Light" and Themes.Light.SubText or Themes.Dark.SubText
-    TweenService:Create(CloseBtn, TweenInfo.new(0.15), { BackgroundColor3 = bg, TextColor3 = tx }):Play()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), { BackgroundColor3 = bg, TextColor3 = tx }):Play()
 end)
 
--- Toggle menu
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Vars.MenuKey then
+-- ===== MENU TOGGLE (RightShift + LeftShift) =====
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.LeftShift then
         Main.Visible = not Main.Visible
     end
 end)
@@ -493,5 +573,4 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Export
-getgenv().Cyrax = { Vars = Vars, Main = Main, Tabs = Tabs }
+getgenv().Synth = { Vars = Vars, Main = Main, Tabs = Tabs }
