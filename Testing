@@ -1,5 +1,4 @@
--- null-wave GUI (Integrated with Aimbot & ESP)
--- Design by ChatGPT, Logic by @sigmatop1jj
+-- by @sigmatop1jj
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
